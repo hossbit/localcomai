@@ -1,5 +1,9 @@
 # ComAI - Local AI Linux Terminal Assistant
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/hossbit/mirassets/main/comai-hero.png" alt="ComAI local AI assistant for Linux" width="900">
+</div>
+
 ![Linux](https://img.shields.io/badge/Linux-Ubuntu%20%7C%20Fedora-orange)
 ![Bash](https://img.shields.io/badge/Bash-shell-4EAA25)
 ![AI](https://img.shields.io/badge/AI-local%20%2B%20ChatGPT-blue)
