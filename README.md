@@ -14,6 +14,8 @@
 
 ## Requirements
 
+ComAI needs [hossbit/localai](https://github.com/hossbit/localai) installed in `~/ai`. That project provides the local OpenAI-compatible AI server used by `comai`.
+
 Required commands:
 
 ```text
