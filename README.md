@@ -1,9 +1,3 @@
-<div align="center">
-  <a href="https://buymeacoffee.com/mirhh">
-    <img src="https://raw.githubusercontent.com/hossbit/mirassets/main/bmc-button.png" alt="Buy me a coffee" width="300">
-  </a>
-</div>
-
 # ComAI
 
 ![Linux](https://img.shields.io/badge/Linux-Ubuntu%20%7C%20Fedora-orange)
@@ -11,6 +5,12 @@
 ![AI](https://img.shields.io/badge/AI-local%20%2B%20ChatGPT-blue)
 ![Release](https://img.shields.io/badge/release-v2.0-green)
 ![License](https://img.shields.io/badge/license-MIT-green)
+
+<div align="center">
+  <a href="https://buymeacoffee.com/mirhh">
+    <img src="https://raw.githubusercontent.com/hossbit/mirassets/main/bmc-button.png" alt="Buy me a coffee" width="300">
+  </a>
+</div>
 
 `comai` is a Bash assistant for Linux commands, files, and logs.
 
