@@ -55,6 +55,8 @@ For local mode, install [hossbit/localai](https://github.com/hossbit/localai) fi
 If you only want ChatGPT mode, you can skip localai and use `comai gpt ...` with an OpenAI API key.
 
 ```bash
+git clone https://github.com/hossbit/comai-linux-assistant.git
+cd comai-linux-assistant
 chmod +x scripts/install.sh
 ./scripts/install.sh
 ```
