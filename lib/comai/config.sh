@@ -35,11 +35,23 @@ comai_expand_home() {
   fi
 }
 
+comai_trim_trailing_slashes() {
+  local value="$1"
+  while [[ "$value" == */ && "$value" != "http://" && "$value" != "https://" ]]; do
+    value="${value%/}"
+  done
+  printf '%s\n' "$value"
+}
+
 comai_load_config() {
   local config_file="${COMAI_CONFIG:-$COMAI_ROOT_DIR/config/comai.yaml}"
-  local ai_dir model gpt_model openai_api_base openai_api_key max_tokens timeout file_max_bytes dir_context_max error_regex
+  local provider ai_dir api_base_url api_base_port model gpt_model openai_api_base openai_api_key
+  local max_tokens timeout file_max_bytes dir_context_max error_regex error_intent_regex
 
+  provider="$(comai_yaml_value provider "$config_file" || true)"
   ai_dir="$(comai_yaml_value ai_dir "$config_file" || true)"
+  api_base_url="$(comai_yaml_value api_base_url "$config_file" || true)"
+  api_base_port="$(comai_yaml_value api_base_port "$config_file" || true)"
   model="$(comai_yaml_value model "$config_file" || true)"
   gpt_model="$(comai_yaml_value gpt_model "$config_file" || true)"
   openai_api_base="$(comai_yaml_value openai_api_base "$config_file" || true)"
@@ -49,12 +61,24 @@ comai_load_config() {
   file_max_bytes="$(comai_yaml_value file_max_bytes "$config_file" || true)"
   dir_context_max="$(comai_yaml_value dir_context_max "$config_file" || true)"
   error_regex="$(comai_yaml_value error_regex "$config_file" || true)"
+  error_intent_regex="$(comai_yaml_value error_intent_regex "$config_file" || true)"
 
-  COMAI_PROVIDER="${COMAI_PROVIDER:-local}"
+  api_base_url="$(comai_trim_trailing_slashes "${api_base_url:-http://127.0.0.1}")"
+
+  COMAI_PROVIDER="${COMAI_PROVIDER:-${provider:-local}}"
   COMAI_AI_DIR="${COMAI_AI_DIR:-$(comai_expand_home "${ai_dir:-~/ai}")}"
-  COMAI_MODEL="${COMAI_MODEL:-${model:-Qwen2.5-Coder-7B-Instruct-Q4_K_M}}"
-  COMAI_API_BASE="${COMAI_API_BASE:-http://127.0.0.1:$(cat "$COMAI_AI_DIR/port" 2>/dev/null || printf '11435')}"
   COMAI_OPENAI_MODEL="${COMAI_OPENAI_MODEL:-${gpt_model:-gpt-5.5}}"
+  if [[ -z "${COMAI_MODEL:-}" ]]; then
+    case "$COMAI_PROVIDER" in
+      openai)
+        COMAI_MODEL="$COMAI_OPENAI_MODEL"
+        ;;
+      *)
+        COMAI_MODEL="${model:-Qwen2.5-Coder-7B-Instruct-Q4_K_M}"
+        ;;
+    esac
+  fi
+  COMAI_API_BASE="${COMAI_API_BASE:-${api_base_url}:${api_base_port:-11435}}"
   COMAI_OPENAI_API_BASE="${COMAI_OPENAI_API_BASE:-${openai_api_base:-https://api.openai.com}}"
   COMAI_OPENAI_API_KEY="${OPENAI_API_KEY:-${COMAI_OPENAI_API_KEY:-${openai_api_key}}}"
   COMAI_MAX_TOKENS="${COMAI_MAX_TOKENS:-${max_tokens:-420}}"
@@ -62,6 +86,7 @@ comai_load_config() {
   COMAI_FILE_MAX_BYTES="${COMAI_FILE_MAX_BYTES:-${file_max_bytes:-24000}}"
   COMAI_DIR_CONTEXT_MAX="${COMAI_DIR_CONTEXT_MAX:-${dir_context_max:-120}}"
   COMAI_ERROR_RE="${COMAI_ERROR_RE:-${error_regex:-error|errors|failed|failure|exception|fatal|panic|timeout|warn|warning|traceback}}"
+  COMAI_ERROR_INTENT_RE="${COMAI_ERROR_INTENT_RE:-${error_intent_regex:-error|errors|failed|failure|warning|warnings|problem|problems|issue|issues|wrong|bad|broken|fail|crash|crashed|panic|timeout|traceback|healthy|health|(^|[[:space:]])ok([[:space:]]|$)|okay|check (this )?log|scan (this )?log}}"
 }
 
 comai_usage() {
@@ -95,6 +120,7 @@ Environment:
   COMAI_AI_DIR=$COMAI_AI_DIR
   COMAI_MODEL=$COMAI_MODEL
   COMAI_API_BASE=$COMAI_API_BASE
+  COMAI_ERROR_INTENT_RE=$COMAI_ERROR_INTENT_RE
   COMAI_OPENAI_MODEL=$COMAI_OPENAI_MODEL
   COMAI_OPENAI_API_BASE=$COMAI_OPENAI_API_BASE
   COMAI_OPENAI_API_KEY=${COMAI_OPENAI_API_KEY:+set}

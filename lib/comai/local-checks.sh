@@ -134,7 +134,7 @@ comai_answer_file_errors() {
   [[ "${#FILES[@]}" -gt 0 ]] || return 1
 
   text="$(printf '%s' "$request" | tr '[:upper:]' '[:lower:]')"
-  if ! printf '%s\n' "$text" | grep -Eq 'error|errors|failed|failure|warning|warnings|problem|problems|issue|issues|wrong|bad|broken|fail|crash|crashed|panic|timeout|traceback|healthy|health|(^|[[:space:]])ok([[:space:]]|$)|okay|check (this )?log|scan (this )?log'; then
+  if ! printf '%s\n' "$text" | grep -Eq "$COMAI_ERROR_INTENT_RE"; then
     return 1
   fi
 

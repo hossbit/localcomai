@@ -1,10 +1,41 @@
+# Default provider. Use "local" for localai or "openai" for ChatGPT/OpenAI mode.
+provider: local
+
+# Directory where localai is installed.
 ai_dir: ~/ai
+
+# Local OpenAI-compatible API base URL without the port.
+api_base_url: http://127.0.0.1
+
+# Local OpenAI-compatible API port.
+api_base_port: 11435
+
+# Default local model used when provider is "local".
 model: Qwen2.5-Coder-7B-Instruct-Q4_K_M
+
+# Default OpenAI model used when provider is "openai" or the user runs "comai gpt ...".
 gpt_model: gpt-5.5
+
+# OpenAI API base URL without a trailing /v1 path.
 openai_api_base: https://api.openai.com
+
+# Optional OpenAI API key. Prefer OPENAI_API_KEY in your shell for better safety.
 openai_api_key:
+
+# Maximum tokens requested from the model.
 max_tokens: 420
+
+# HTTP request timeout in seconds.
 timeout: 120
+
+# Maximum bytes read from each file passed with -f/--file.
 file_max_bytes: 24000
+
+# Maximum number of current-directory entries included as context.
 dir_context_max: 120
+
+# Regex used to find issue lines in log/error file checks.
 error_regex: error|errors|failed|failure|exception|fatal|panic|timeout|warn|warning|traceback
+
+# Regex used to decide whether a file question is asking for a log/error check.
+error_intent_regex: error|errors|failed|failure|warning|warnings|problem|problems|issue|issues|wrong|bad|broken|fail|crash|crashed|panic|timeout|traceback|healthy|health|(^|[[:space:]])ok([[:space:]]|$)|okay|check (this )?log|scan (this )?log

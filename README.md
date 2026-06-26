@@ -145,18 +145,28 @@ config/comai.yaml              # source default
 Example:
 
 ```yaml
+provider: local
 ai_dir: ~/ai
+api_base_url: http://127.0.0.1
+api_base_port: 11435
 model: Qwen2.5-Coder-7B-Instruct-Q4_K_M
 gpt_model: gpt-5.5
 openai_api_base: https://api.openai.com
 openai_api_key:
 max_tokens: 420
 timeout: 120
+file_max_bytes: 24000
+dir_context_max: 120
+error_regex: error|errors|failed|failure|exception|fatal|panic|timeout|warn|warning|traceback
+error_intent_regex: error|errors|failed|failure|warning|warnings|problem|problems|issue|issues|wrong|bad|broken|fail|crash|crashed|panic|timeout|traceback|healthy|health|(^|[[:space:]])ok([[:space:]]|$)|okay|check (this )?log|scan (this )?log
 ```
 
 What the main keys mean:
 
+- `provider`: default provider. Use `local` or `openai`.
 - `ai_dir`: where localai is installed. Default is `~/ai`.
+- `api_base_url`: local OpenAI-compatible API URL without the port.
+- `api_base_port`: local OpenAI-compatible API port.
 - `model`: default local model for `comai hi`.
 - `gpt_model`: default OpenAI model for `comai gpt hi`.
 - `openai_api_base`: OpenAI API URL. Keep this as `https://api.openai.com` unless you know you need another compatible server.
@@ -166,6 +176,7 @@ What the main keys mean:
 - `file_max_bytes`: maximum bytes read from each `-f` file.
 - `dir_context_max`: maximum current-directory entries sent as context.
 - `error_regex`: words used by local log/error checks.
+- `error_intent_regex`: words used to decide whether a question is asking for a log/error check.
 
 Useful overrides:
 

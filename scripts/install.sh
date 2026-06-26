@@ -170,9 +170,8 @@ After=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-Environment=COMAI_AI_DIR=$HOME/ai
-ExecStart=$INSTALL_DIR/scripts/comai-localai-service.sh
-ExecStop=$HOME/ai/stop.sh
+ExecStart=$INSTALL_DIR/scripts/comai-localai-service.sh start
+ExecStop=$INSTALL_DIR/scripts/comai-localai-service.sh stop
 
 [Install]
 WantedBy=default.target
