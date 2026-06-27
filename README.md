@@ -14,7 +14,7 @@
 ![Local AI](https://img.shields.io/badge/Local%20AI-supported-2E7D32)
 ![Ollama](https://img.shields.io/badge/Ollama-supported-black)
 ![ChatGPT](https://img.shields.io/badge/ChatGPT-supported-10A37F)
-![Release](https://img.shields.io/badge/release-v2.1.2-green)
+![Release](https://img.shields.io/badge/release-v2.1.3-green)
 ![License](https://img.shields.io/badge/license-MIT-green)
 [![Wiki](https://img.shields.io/badge/Wiki-documentation-blueviolet)](https://github.com/hossbit/comai-linux-assistant-wiki)
 

@@ -48,6 +48,8 @@ comai_load_config() {
   local provider ai_dir api_base_url api_base_port model gpt_model ollama_api_base ollama_model openai_api_base openai_api_key
   local max_tokens timeout file_max_bytes dir_context_max error_regex error_intent_regex
 
+  COMAI_CONFIG_FILE="$config_file"
+
   provider="$(comai_yaml_value provider "$config_file" || true)"
   ai_dir="$(comai_yaml_value ai_dir "$config_file" || true)"
   api_base_url="$(comai_yaml_value api_base_url "$config_file" || true)"

@@ -130,6 +130,13 @@ comai_ask_local_ai() {
         | jq -r '(.error | if type == "object" then .message else . end) // empty' 2>/dev/null \
         | comai_clean_ai_output
     )"
+    if [[ "$http_status" == "404" && "$content" == *"no router for requested model"* ]]; then
+      comai_error "LocalAI is running, but the configured model was not found:"
+      comai_error "  $COMAI_MODEL"
+      comai_error "Add the matching .gguf file to: ${COMAI_AI_DIR}/models"
+      comai_error "Or edit your ComAI config: ${COMAI_CONFIG_FILE}"
+      return 1
+    fi
     if [[ -n "$content" ]]; then
       comai_error "local AI API error ${http_status}: ${content}"
     else
