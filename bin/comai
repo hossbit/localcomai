@@ -19,6 +19,7 @@ COMAI_ROOT_DIR="$(cd "$(dirname "$COMAI_BIN_PATH")/.." && pwd)"
 
 COMAI_VERSION="2.2.1"
 COMAI_HISTORY_FILE="${COMAI_HISTORY_FILE:-$HOME/.local/share/comai/history.log}"
+COMAI_SOURCE_URL="${COMAI_SOURCE_URL:-https://github.com/hossbit/comai-linux-assistant.git}"
 
 comai_log() {
   local level="$1"
@@ -463,16 +464,35 @@ comai_cmd_version() {
 }
 
 comai_cmd_update() {
+  local temp_dir status
+
   if ! comai_have git; then
-    comai_error "git is required to update a source checkout."
+    comai_error "git is required to update ComAI."
     return 1
   fi
 
   if [[ -d "$COMAI_ROOT_DIR/.git" ]]; then
     git -C "$COMAI_ROOT_DIR" pull --ff-only
   else
-    comai_error "this install is not a git checkout. Re-run the installer to update."
-    return 1
+    temp_dir="$(mktemp -d)"
+
+    printf 'This install is not a git checkout. Creating a temporary source checkout...\n'
+    if ! git clone --depth 1 "$COMAI_SOURCE_URL" "$temp_dir"; then
+      status=$?
+      rm -rf "$temp_dir"
+      return "$status"
+    fi
+
+    if [[ ! -f "$temp_dir/scripts/install.sh" ]]; then
+      comai_error "installer not found in cloned source: $temp_dir/scripts/install.sh"
+      rm -rf "$temp_dir"
+      return 1
+    fi
+
+    bash "$temp_dir/scripts/install.sh" --dir "$COMAI_ROOT_DIR" --ai-dir "$COMAI_AI_DIR"
+    status=$?
+    rm -rf "$temp_dir"
+    return "$status"
   fi
 }
 
