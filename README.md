@@ -67,7 +67,6 @@ comai chat        # Start an interactive conversation
 comai explain     # Explain a command, error, or output
 comai analyze     # Analyze logs, files, or piped output
 comai status      # Show provider status and connections
-comai check       # Check the active provider only
 comai provider    # Show active and available providers
 comai models      # List models from all providers
 comai config      # View, get, or edit settings
@@ -85,10 +84,9 @@ ComAI supports:
 - `ollama`: local Ollama API, default `http://127.0.0.1:11434`
 - `openai`: OpenAI API with `OPENAI_API_KEY` or `openai_api_key`
 
-Check the active provider or all providers:
+Check providers:
 
 ```bash
-comai check
 comai status
 comai models
 comai provider
