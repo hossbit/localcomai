@@ -17,7 +17,7 @@ COMAI_ROOT_DIR="$(cd "$(dirname "$COMAI_BIN_PATH")/.." && pwd)"
 # shellcheck source=../lib/comai/ai.sh
 . "$COMAI_ROOT_DIR/lib/comai/ai.sh"
 
-COMAI_VERSION="2.2.0"
+COMAI_VERSION="2.2.1"
 COMAI_HISTORY_FILE="${COMAI_HISTORY_FILE:-$HOME/.local/share/comai/history.log}"
 
 comai_log() {

@@ -63,8 +63,18 @@ comai_parse_args() {
           REQUEST_ARGS+=("$arg")
         fi
         ;;
+      local)
+        if [[ "${#REQUEST_ARGS[@]}" -eq 0 ]]; then
+          comai_select_local_provider
+        else
+          REQUEST_ARGS+=("$arg")
+        fi
+        ;;
       --ollama)
         comai_select_ollama_provider
+        ;;
+      --local)
+        comai_select_local_provider
         ;;
       --model=*)
         COMAI_MODEL="${arg#--model=}"
@@ -96,8 +106,6 @@ comai_parse_args() {
         ;;
       --command|-command|-c)
         next_is_command=1
-        ;;
-      --local)
         ;;
       --local=*)
         REQUEST_ARGS+=("${arg#--local=}")

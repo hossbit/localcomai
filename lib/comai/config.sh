@@ -247,3 +247,11 @@ comai_select_ollama_provider() {
   fi
   COMAI_API_BASE="$COMAI_OLLAMA_API_BASE"
 }
+
+comai_select_local_provider() {
+  COMAI_PROVIDER="local"
+  if [[ "${COMAI_MODEL_EXPLICIT:-0}" -ne 1 ]]; then
+    COMAI_MODEL="$COMAI_LOCAL_MODEL"
+  fi
+  COMAI_API_BASE="$COMAI_LOCAL_API_BASE"
+}
