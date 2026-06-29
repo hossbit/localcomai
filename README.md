@@ -20,12 +20,12 @@
 
 Use it to ask Linux questions, explain commands before you run them, inspect
 files, scan logs, and talk to local AI, Ollama, or OpenAI without leaving your
-shell.
+shell. ComAI is the client; LocalAI is only one optional backend.
 
 ## Why Use It
 
 - Works from any terminal with the simple `comai` command.
-- Supports local OpenAI-compatible servers, Ollama, and OpenAI.
+- Supports LocalAI, Ollama, LM Studio, llama.cpp server, OpenAI, and other OpenAI-compatible APIs.
 - Understands files and logs with `-f`.
 - Keeps setup and provider checks visible with `comai status`.
 - Installs as a user-space tool under `~/localcomai`.
@@ -67,13 +67,14 @@ comai chat        # Start an interactive conversation
 comai explain     # Explain a command, error, or output
 comai analyze     # Analyze logs, files, or piped output
 comai status      # Show provider status and connections
+comai check       # Check the active provider only
 comai provider    # Show active and available providers
 comai models      # List models from all providers
-comai config      # View or edit settings
+comai config      # View, get, or edit settings
 comai history     # Show previous conversations
-comai start       # Start the bundled LocalAI helper service
-comai stop        # Stop the bundled LocalAI helper service
-comai restart     # Restart the bundled LocalAI helper service
+comai start       # Start the optional LocalAI helper service
+comai stop        # Stop the optional LocalAI helper service
+comai restart     # Restart the optional LocalAI helper service
 ```
 
 ## Providers
@@ -84,9 +85,10 @@ ComAI supports:
 - `ollama`: local Ollama API, default `http://127.0.0.1:11434`
 - `openai`: OpenAI API with `OPENAI_API_KEY` or `openai_api_key`
 
-Check everything:
+Check the active provider or all providers:
 
 ```bash
+comai check
 comai status
 comai models
 comai provider
@@ -114,6 +116,7 @@ Full documentation lives in the wiki:
 - [Installation](https://github.com/hossbit/comai-linux-assistant-wiki/blob/main/Installation.md)
 - [Providers](https://github.com/hossbit/comai-linux-assistant-wiki/blob/main/Providers.md)
 - [Configuration](https://github.com/hossbit/comai-linux-assistant-wiki/blob/main/Configuration.md)
+- [ComAI + LocalAI](https://github.com/hossbit/comai-linux-assistant-wiki/blob/main/ComAI-and-LocalAI.md)
 - [Local AI Service](https://github.com/hossbit/comai-linux-assistant-wiki/blob/main/Local-AI-Service.md)
 - [File and Log Analysis](https://github.com/hossbit/comai-linux-assistant-wiki/blob/main/File-and-Log-Analysis.md)
 - [Troubleshooting](https://github.com/hossbit/comai-linux-assistant-wiki/blob/main/Troubleshooting.md)

@@ -17,7 +17,7 @@ COMAI_ROOT_DIR="$(cd "$(dirname "$COMAI_BIN_PATH")/.." && pwd)"
 # shellcheck source=../lib/comai/ai.sh
 . "$COMAI_ROOT_DIR/lib/comai/ai.sh"
 
-COMAI_VERSION="2.2.2"
+COMAI_VERSION="2.2.3"
 COMAI_HISTORY_FILE="${COMAI_HISTORY_FILE:-$HOME/.local/share/comai/history.log}"
 COMAI_SOURCE_URL="${COMAI_SOURCE_URL:-https://github.com/hossbit/comai-linux-assistant.git}"
 
@@ -247,7 +247,7 @@ comai_cmd_status_one() {
 }
 
 comai_cmd_status() {
-  local provider failed=0
+  local provider failed=0 active_failed=0
 
   if ! comai_have curl || ! comai_have jq; then
     comai_error "curl and jq are required."
@@ -259,15 +259,37 @@ comai_cmd_status() {
     comai_log info provider_status_check "provider=all"
     for provider in local ollama openai; do
       printf '\n'
-      comai_cmd_status_one "$provider" || failed=1
+      if ! comai_cmd_status_one "$provider"; then
+        failed=1
+        [[ "$provider" == "$COMAI_PROVIDER" ]] && active_failed=1
+      fi
     done
   else
     case "$1" in
-      local|ollama|openai) comai_cmd_status_one "$1" || failed=1 ;;
+      local|ollama|openai)
+        if ! comai_cmd_status_one "$1"; then
+          failed=1
+          [[ "$1" == "$COMAI_PROVIDER" ]] && active_failed=1
+        fi
+        ;;
       *) comai_error "usage: comai status [all|local|ollama|openai]"; return 1 ;;
     esac
   fi
+
+  if [[ "${1:-all}" == "all" && "$active_failed" -eq 0 ]]; then
+    return 0
+  fi
   return "$failed"
+}
+
+comai_cmd_check() {
+  if ! comai_have curl || ! comai_have jq; then
+    comai_error "curl and jq are required."
+    return 1
+  fi
+
+  printf 'Config: %s\n\n' "$COMAI_CONFIG_FILE"
+  comai_cmd_status_one "$COMAI_PROVIDER"
 }
 
 comai_cmd_models() {
@@ -363,6 +385,19 @@ comai_cmd_config() {
     path)
       printf '%s\n' "$COMAI_CONFIG_FILE"
       ;;
+    get)
+      if [[ -z "${2:-}" ]]; then
+        comai_error "usage: comai config get KEY"
+        return 1
+      fi
+      if [[ "$2" == "openai_api_key" ]]; then
+        if [[ -n "$(comai_yaml_value "$2" "$COMAI_CONFIG_FILE" || true)" ]]; then
+          printf '[set]\n'
+        fi
+      else
+        comai_yaml_value "$2" "$COMAI_CONFIG_FILE"
+      fi
+      ;;
     edit)
       "${EDITOR:-nano}" "$COMAI_CONFIG_FILE"
       ;;
@@ -375,7 +410,7 @@ comai_cmd_config() {
       printf 'Set %s in %s\n' "$2" "$COMAI_CONFIG_FILE"
       ;;
     *)
-      comai_error "usage: comai config [show|path|edit|set KEY VALUE]"
+      comai_error "usage: comai config [show|path|get KEY|edit|set KEY VALUE]"
       return 1
       ;;
   esac
@@ -464,7 +499,7 @@ comai_cmd_version() {
 }
 
 comai_cmd_update() {
-  local temp_dir status
+  local temp_dir status source_url
 
   if ! comai_have git; then
     comai_error "git is required to update ComAI."
@@ -472,12 +507,21 @@ comai_cmd_update() {
   fi
 
   if [[ -d "$COMAI_ROOT_DIR/.git" ]]; then
+    printf 'Updating git checkout: %s\n' "$COMAI_ROOT_DIR"
     git -C "$COMAI_ROOT_DIR" pull --ff-only
   else
+    source_url="$COMAI_SOURCE_URL"
+    if [[ -f "$COMAI_ROOT_DIR/.install-meta" ]]; then
+      # shellcheck source=/dev/null
+      . "$COMAI_ROOT_DIR/.install-meta"
+      source_url="${COMAI_INSTALL_SOURCE_URL:-$COMAI_SOURCE_URL}"
+    fi
     temp_dir="$(mktemp -d)"
 
-    printf 'This install is not a git checkout. Creating a temporary source checkout...\n'
-    if ! git clone --depth 1 "$COMAI_SOURCE_URL" "$temp_dir"; then
+    printf 'This install is not a git checkout: %s\n' "$COMAI_ROOT_DIR"
+    printf 'Creating a temporary source checkout from: %s\n' "$source_url"
+    printf 'Existing config values will be preserved by the installer.\n'
+    if ! git clone --depth 1 "$source_url" "$temp_dir"; then
       status=$?
       rm -rf "$temp_dir"
       return "$status"
@@ -541,7 +585,7 @@ comai_main() {
       comai_cmd_status "$@"
       ;;
     check)
-      comai_cmd_status "$@"
+      comai_cmd_check "$@"
       ;;
     provider)
       comai_cmd_provider "$@"

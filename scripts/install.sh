@@ -13,6 +13,8 @@ REQUIRED_COMMANDS=(bash curl jq find sort head sed awk grep wc tr readlink date 
 OPTIONAL_COMMANDS=(file numfmt)
 PATH_NOTE=""
 SERVICE_NOTE=""
+COMAI_VERSION=""
+INSTALL_SOURCE_URL="${COMAI_SOURCE_URL:-https://github.com/hossbit/comai-linux-assistant.git}"
 
 section() {
   printf '\n== %s ==\n' "$1"
@@ -405,15 +407,18 @@ WantedBy=default.target
 EOF
 
   systemctl --user daemon-reload
-  if confirm_default_yes "Enable and start the localai user service now?"; then
-    systemctl --user enable --now "$SERVICE_NAME"
-    SERVICE_NOTE="$SERVICE_NAME enabled and started."
-  else
-    SERVICE_NOTE="$SERVICE_NAME installed but not enabled. Start it later with: systemctl --user start $SERVICE_NAME"
+  SERVICE_NOTE="$SERVICE_NAME installed but not started. Start it later only if you use the optional LocalAI helper: systemctl --user enable --now $SERVICE_NAME"
+}
+
+detect_install_metadata() {
+  COMAI_VERSION="$(sed -n 's/^COMAI_VERSION="\([^"]*\)"/\1/p' "$ROOT_DIR/bin/comai" | head -n 1)"
+  if command -v git >/dev/null 2>&1 && [[ -d "$ROOT_DIR/.git" ]]; then
+    INSTALL_SOURCE_URL="$(git -C "$ROOT_DIR" remote get-url origin 2>/dev/null || printf '%s' "$INSTALL_SOURCE_URL")"
   fi
 }
 
 parse_args "$@"
+detect_install_metadata
 
 section "ComAI installer"
 cat <<EOF
@@ -423,9 +428,11 @@ It installs:
   app files      -> one directory under your home folder
   commands       -> $BIN_DIR/comai and $BIN_DIR/comi
   config         -> config/comai.yaml inside the app directory
-  user service   -> $SERVICE_FILE for the optional LocalAI helper
+  helper service -> $SERVICE_FILE for the optional LocalAI helper
 
 Existing ComAI files are updated. Existing config values are preserved.
+ComAI is a client. It can use LocalAI, Ollama, LM Studio, llama.cpp server,
+OpenAI, or any OpenAI-compatible API.
 EOF
 
 section "Install location"
@@ -440,6 +447,8 @@ fi
 section "Optional LocalAI helper"
 prompt_ai_dir
 printf 'Selected LocalAI directory: %s\n' "$AI_DIR"
+printf 'This path is only used by the optional ComAI LocalAI helper service.\n'
+printf 'If you use another local provider, configure local_api_base instead.\n'
 
 section "Dependencies"
 printf 'Checking required commands: %s\n' "${REQUIRED_COMMANDS[*]}"
@@ -472,6 +481,13 @@ cp "$ROOT_DIR/scripts/uninstall.sh" "$INSTALL_DIR/scripts/"
 install_config
 configure_local_ai_dir
 
+cat > "$INSTALL_DIR/.install-meta" <<EOF
+COMAI_INSTALL_VERSION="${COMAI_VERSION:-unknown}"
+COMAI_INSTALL_SOURCE_URL="$INSTALL_SOURCE_URL"
+COMAI_INSTALL_SOURCE_DIR="$ROOT_DIR"
+COMAI_INSTALL_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
+EOF
+
 chmod +x "$INSTALL_DIR/bin/comai" "$INSTALL_DIR/scripts/comai-localai-service.sh" "$INSTALL_DIR/scripts/uninstall.sh"
 
 section "Commands"
@@ -480,8 +496,8 @@ install_command_wrapper "$INSTALL_DIR/bin/comai" "$BIN_DIR/comai"
 install_command_wrapper "$INSTALL_DIR/bin/comai" "$BIN_DIR/comi"
 
 section "LocalAI user service"
-printf 'This optional service starts/stops the configured LocalAI directory.\n'
-printf 'Other local providers can ignore it and use local_api_base in config/comai.yaml.\n'
+printf 'This optional helper can start/stop local-ai-server when you use that separate project.\n'
+printf 'ComAI does not require LocalAI; other local providers can ignore this service.\n'
 install_service
 
 section "Shell PATH"
@@ -496,9 +512,10 @@ Installed:
   $BIN_DIR/comi
   $SERVICE_FILE
   $INSTALL_DIR/config/comai.yaml
+  $INSTALL_DIR/.install-meta
   $INSTALL_DIR/lib/comai/
   $INSTALL_DIR/logs/
-  LocalAI directory: $AI_DIR
+  Optional LocalAI helper directory: $AI_DIR
 
 Service:
   $SERVICE_NOTE
