@@ -101,6 +101,16 @@ ComAI supports:
 - `lmstudio`: LM Studio local server, default `http://127.0.0.1:1234`
 - `openai`: OpenAI API with `OPENAI_API_KEY` or `providers.openai.api_key`
 
+<div align="center">
+  <a href="https://github.com/hossbit/local-ai-server">
+    <img src="https://raw.githubusercontent.com/hossbit/mirassets/main/images/local-ai-server.png" alt="Local AI Server" width="300">
+    <br>
+    <strong>hossbit/local-ai-server</strong>
+  </a>
+  <br>
+  OpenAI-compatible Linux local AI backend for the <code>local</code> provider.
+</div>
+
 Check providers:
 
 ```bash
