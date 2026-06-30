@@ -9,10 +9,12 @@ BIN_DIR="${HOME}/.local/bin"
 SYSTEMD_USER_DIR="${HOME}/.config/systemd/user"
 SERVICE_NAME="comai-localai.service"
 SERVICE_FILE="$SYSTEMD_USER_DIR/$SERVICE_NAME"
+LOCALAI_SERVICE_FILE="$SYSTEMD_USER_DIR/localai.service"
 REQUIRED_COMMANDS=(bash curl jq find sort head sed awk grep wc tr readlink date systemctl)
 OPTIONAL_COMMANDS=(file numfmt)
 PATH_NOTE=""
 SERVICE_NOTE=""
+SERVICE_INSTALLED=0
 COMAI_VERSION=""
 INSTALL_SOURCE_URL="${COMAI_SOURCE_URL:-https://github.com/hossbit/comai-linux-assistant.git}"
 
@@ -403,6 +405,18 @@ configure_local_ai_dir() {
 }
 
 install_service() {
+  if [[ -f "$LOCALAI_SERVICE_FILE" ]]; then
+    printf 'Existing LocalAI service found: %s\n' "$LOCALAI_SERVICE_FILE"
+    printf 'Skipping %s to avoid controlling the separate LocalAI project service.\n' "$SERVICE_NAME"
+    if [[ -f "$SERVICE_FILE" ]] && grep -Fq "ExecStart=$INSTALL_DIR/scripts/comai-localai-service.sh start" "$SERVICE_FILE"; then
+      printf 'Removing obsolete ComAI helper service: %s\n' "$SERVICE_FILE"
+      rm -f "$SERVICE_FILE"
+      systemctl --user daemon-reload
+    fi
+    SERVICE_NOTE="Skipped $SERVICE_NAME because localai.service already exists. Use: systemctl --user start localai.service"
+    return 0
+  fi
+
   if [[ -f "$SERVICE_FILE" ]]; then
     printf 'Existing user service found: %s\n' "$SERVICE_FILE"
   else
@@ -425,6 +439,7 @@ WantedBy=default.target
 EOF
 
   systemctl --user daemon-reload
+  SERVICE_INSTALLED=1
   SERVICE_NOTE="$SERVICE_NAME installed but not started. Start it later only if you use the optional LocalAI helper: systemctl --user enable --now $SERVICE_NAME"
 }
 
@@ -528,12 +543,17 @@ Installed:
   $INSTALL_DIR
   $BIN_DIR/comai
   $BIN_DIR/comi
-  $SERVICE_FILE
   $INSTALL_DIR/config/comai.yaml
   $INSTALL_DIR/.install-meta
   $INSTALL_DIR/lib/comai/
   $INSTALL_DIR/logs/
   Optional LocalAI helper directory: $AI_DIR
+EOF
+if [[ "$SERVICE_INSTALLED" -eq 1 ]]; then
+  printf '  %s\n' "$SERVICE_FILE"
+fi
+
+cat <<EOF
 
 Service:
   $SERVICE_NOTE

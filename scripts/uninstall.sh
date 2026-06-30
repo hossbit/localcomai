@@ -8,6 +8,7 @@ BIN_DIR="${HOME}/.local/bin"
 SYSTEMD_USER_DIR="${HOME}/.config/systemd/user"
 SERVICE_NAME="comai-localai.service"
 SERVICE_FILE="$SYSTEMD_USER_DIR/$SERVICE_NAME"
+LOCALAI_SERVICE_FILE="$SYSTEMD_USER_DIR/localai.service"
 LOCALAI_DIR_NOTE="$HOME/ai"
 REMOVED_ITEMS=()
 SKIPPED_ITEMS=()
@@ -225,8 +226,13 @@ section "ComAI uninstall"
 printf 'Resolved install directory: %s\n' "$INSTALL_DIR"
 
 if command -v systemctl >/dev/null 2>&1; then
-  printf 'Stopping and disabling user service if it is active: %s\n' "$SERVICE_NAME"
-  systemctl --user disable --now "$SERVICE_NAME" >/dev/null 2>&1 || true
+  if [[ -f "$LOCALAI_SERVICE_FILE" ]]; then
+    printf 'Disabling ComAI helper service without stopping LocalAI: %s\n' "$SERVICE_NAME"
+    systemctl --user disable "$SERVICE_NAME" >/dev/null 2>&1 || true
+  else
+    printf 'Stopping and disabling user service if it is active: %s\n' "$SERVICE_NAME"
+    systemctl --user disable --now "$SERVICE_NAME" >/dev/null 2>&1 || true
+  fi
 else
   printf 'systemctl was not found. Skipping user service stop/disable.\n'
 fi
