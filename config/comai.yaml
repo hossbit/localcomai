@@ -1,27 +1,33 @@
-# Default provider. Use "local", "ollama", or "openai".
+# Default provider. Use "local", "ollama", "lmstudio", or "openai".
 provider: local
 
-# OpenAI-compatible local API base URL.
-# Examples: LocalAI, llama.cpp server, LM Studio, or any compatible local server.
-local_api_base: http://127.0.0.1:11435
+# Optional LocalAI helper directory. This is only used by the start/stop helper service.
+ai_dir: ~/ai
 
-# Default local model used when provider is "local".
-local_model: Qwen2.5-Coder-7B-Instruct-Q4_K_M
+# Provider-specific settings.
+providers:
+  # OpenAI-compatible local API base URL.
+  # Examples: LocalAI, llama.cpp server, or any compatible local server.
+  local:
+    api_base: http://127.0.0.1:11435
+    model: Qwen2.5-Coder-7B-Instruct-Q4_K_M
 
-# Default OpenAI model used when provider is "openai" or the user runs "comai gpt ...".
-gpt_model: gpt-5.5
+  # Ollama API base URL without a trailing API path.
+  ollama:
+    api_base: http://127.0.0.1:11434
+    model: qwen2.5-coder:7b
 
-# Ollama API base URL without a trailing API path.
-ollama_api_base: http://127.0.0.1:11434
+  # LM Studio local server URL without a trailing /v1 path.
+  lmstudio:
+    api_base: http://127.0.0.1:1234
+    model: local-model
 
-# Default Ollama model used when provider is "ollama" or the user runs "comai ollama ...".
-ollama_model: qwen2.5-coder:7b
-
-# OpenAI API base URL without a trailing /v1 path.
-openai_api_base: https://api.openai.com
-
-# Optional OpenAI API key. Prefer OPENAI_API_KEY in your shell for better safety.
-openai_api_key:
+  # OpenAI API base URL without a trailing /v1 path.
+  openai:
+    api_base: https://api.openai.com
+    model: gpt-5.5
+    # Optional OpenAI API key. Prefer OPENAI_API_KEY in your shell for better safety.
+    api_key:
 
 # Maximum tokens requested from the model.
 max_tokens: 420

@@ -63,6 +63,13 @@ comai_parse_args() {
           REQUEST_ARGS+=("$arg")
         fi
         ;;
+      lmstudio|lm-studio)
+        if [[ "${#REQUEST_ARGS[@]}" -eq 0 ]]; then
+          comai_select_lmstudio_provider
+        else
+          REQUEST_ARGS+=("$arg")
+        fi
+        ;;
       local)
         if [[ "${#REQUEST_ARGS[@]}" -eq 0 ]]; then
           comai_select_local_provider
@@ -72,6 +79,9 @@ comai_parse_args() {
         ;;
       --ollama)
         comai_select_ollama_provider
+        ;;
+      --lmstudio|--lm-studio)
+        comai_select_lmstudio_provider
         ;;
       --local)
         comai_select_local_provider

@@ -87,6 +87,9 @@ comai_ask_ai() {
     ollama)
       comai_ask_ollama "$@"
       ;;
+    lmstudio)
+      comai_ask_openai_compatible "$@" "LM Studio" "You are ComAI, a Linux command assistant running through LM Studio. Use the provided live context and answer the actual request. Keep wording clean and avoid repetition."
+      ;;
     *)
       comai_ask_local_ai "$@"
       ;;
@@ -94,11 +97,17 @@ comai_ask_ai() {
 }
 
 comai_ask_local_ai() {
+  comai_ask_openai_compatible "$@" "local provider" "You are ComAI, a local Linux assistant. Do not use canned answers. Use the provided live context and answer the actual request. Keep wording clean and avoid repetition."
+}
+
+comai_ask_openai_compatible() {
   local prompt="$1"
+  local label="$2"
+  local system_prompt="$3"
   local response content http_status response_body
 
   if ! comai_have curl || ! comai_have jq; then
-    comai_error "curl and jq are required for local provider requests."
+    comai_error "curl and jq are required for ${label} requests."
     return 1
   fi
 
@@ -106,11 +115,12 @@ comai_ask_local_ai() {
     jq -n \
       --arg model "$COMAI_MODEL" \
       --arg prompt "$prompt" \
+      --arg system_prompt "$system_prompt" \
       --arg max_tokens "$COMAI_MAX_TOKENS" \
       '{
         model: $model,
         messages: [
-          {role: "system", content: "You are ComAI, a local Linux assistant. Do not use canned answers. Use the provided live context and answer the actual request. Keep wording clean and avoid repetition."},
+          {role: "system", content: $system_prompt},
           {role: "user", content: $prompt}
         ],
         temperature: 0,
@@ -131,16 +141,15 @@ comai_ask_local_ai() {
         | comai_clean_ai_output
     )"
     if [[ "$http_status" == "404" && "$content" == *"no router for requested model"* ]]; then
-      comai_error "Local provider is running, but the configured model was not found:"
+      comai_error "${label} is running, but the configured model was not found:"
       comai_error "  $COMAI_MODEL"
-      comai_error "Check local_model and local_api_base in: ${COMAI_CONFIG_FILE}"
-      comai_error "For LocalAI, also check the matching .gguf file under: ${COMAI_AI_DIR}/models"
+      comai_error "Check the provider model and api_base in: ${COMAI_CONFIG_FILE}"
       return 1
     fi
     if [[ -n "$content" ]]; then
-      comai_error "local provider API error ${http_status}: ${content}"
+      comai_error "${label} API error ${http_status}: ${content}"
     else
-      comai_error "local provider API error ${http_status}."
+      comai_error "${label} API error ${http_status}."
     fi
     return 1
   fi
@@ -151,7 +160,7 @@ comai_ask_local_ai() {
       | comai_clean_ai_output
   )"
   if [[ -z "$content" ]]; then
-    comai_error "local provider returned an empty response with model ${COMAI_MODEL}."
+    comai_error "${label} returned an empty response with model ${COMAI_MODEL}."
     return 1
   fi
 

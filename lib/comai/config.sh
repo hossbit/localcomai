@@ -24,6 +24,38 @@ comai_yaml_value() {
   ' "$file"
 }
 
+comai_yaml_provider_value() {
+  local provider="$1"
+  local key="$2"
+  local file="$3"
+
+  [[ -f "$file" ]] || return 1
+  awk -v provider="$provider" -v key="$key" '
+    /^[^[:space:]#][^:]*:/ {
+      in_providers = ($0 ~ /^providers[[:space:]]*:/)
+      in_provider = 0
+    }
+    in_providers && $0 ~ "^[[:space:]]{2}" provider "[[:space:]]*:" {
+      in_provider = 1
+      next
+    }
+    in_provider && $0 ~ "^[[:space:]]{2}[A-Za-z0-9_-]+[[:space:]]*:" {
+      in_provider = 0
+    }
+    in_provider {
+      line = $0
+      sub(/^[[:space:]]+/, "", line)
+      if (line ~ "^" key "[[:space:]]*:") {
+        value = substr(line, index(line, ":") + 1)
+        sub(/^[[:space:]]+/, "", value)
+        sub(/[[:space:]]+$/, "", value)
+        print value
+        exit
+      }
+    }
+  ' "$file"
+}
+
 comai_expand_home() {
   local value="$1"
   if [[ "$value" == "~" ]]; then
@@ -77,9 +109,76 @@ comai_set_config_value() {
   fi
 }
 
+comai_legacy_provider_config_key() {
+  local provider="$1"
+  local key="$2"
+
+  case "$provider:$key" in
+    local:api_base) printf 'local_api_base\n' ;;
+    local:model) printf 'local_model\n' ;;
+    ollama:api_base) printf 'ollama_api_base\n' ;;
+    ollama:model) printf 'ollama_model\n' ;;
+    lmstudio:api_base) printf 'lmstudio_api_base\n' ;;
+    lmstudio:model) printf 'lmstudio_model\n' ;;
+    openai:api_base) printf 'openai_api_base\n' ;;
+    openai:model) printf 'gpt_model\n' ;;
+    openai:api_key) printf 'openai_api_key\n' ;;
+    *) return 1 ;;
+  esac
+}
+
+comai_set_provider_config_value() {
+  local provider="$1"
+  local key="$2"
+  local value="$3"
+  local file="${4:-$COMAI_CONFIG_FILE}"
+  local legacy_key
+
+  legacy_key="$(comai_legacy_provider_config_key "$provider" "$key" || true)"
+  if grep -Eq "^[[:space:]]{2}${provider}[[:space:]]*:" "$file" 2>/dev/null; then
+    awk -v provider="$provider" -v key="$key" -v value="$value" '
+      BEGIN { in_providers = 0; in_provider = 0; changed = 0 }
+      /^[^[:space:]#][^:]*:/ {
+        in_providers = ($0 ~ /^providers[[:space:]]*:/)
+        in_provider = 0
+      }
+      in_providers && $0 ~ "^[[:space:]]{2}" provider "[[:space:]]*:" {
+        in_provider = 1
+        print
+        next
+      }
+      in_provider && $0 ~ "^[[:space:]]{4}" key "[[:space:]]*:" {
+        print "    " key ": " value
+        changed = 1
+        next
+      }
+      in_provider && $0 ~ "^[[:space:]]{2}[A-Za-z0-9_-]+[[:space:]]*:" {
+        if (!changed) {
+          print "    " key ": " value
+          changed = 1
+        }
+        in_provider = 0
+      }
+      { print }
+      END {
+        if (in_provider && !changed) {
+          print "    " key ": " value
+        }
+      }
+    ' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+    if [[ -n "$legacy_key" ]] && grep -Eq "^[[:space:]]*${legacy_key}[[:space:]]*:" "$file"; then
+      comai_set_config_value "$legacy_key" "$value" "$file"
+    fi
+  elif [[ -n "$legacy_key" ]]; then
+    comai_set_config_value "$legacy_key" "$value" "$file"
+  else
+    comai_set_config_value "$key" "$value" "$file"
+  fi
+}
+
 comai_load_config() {
   local config_file="${COMAI_CONFIG:-$COMAI_ROOT_DIR/config/comai.yaml}"
-  local provider ai_dir api_base_url api_base_port model local_api_base local_model gpt_model ollama_api_base ollama_model openai_api_base openai_api_key
+  local provider ai_dir api_base_url api_base_port model local_api_base local_model gpt_model ollama_api_base ollama_model lmstudio_api_base lmstudio_model openai_api_base openai_api_key
   local max_tokens timeout log_file file_max_bytes dir_context_max error_regex error_intent_regex
 
   COMAI_CONFIG_FILE="$config_file"
@@ -89,13 +188,15 @@ comai_load_config() {
   api_base_url="$(comai_yaml_value api_base_url "$config_file" || true)"
   api_base_port="$(comai_yaml_value api_base_port "$config_file" || true)"
   model="$(comai_yaml_value model "$config_file" || true)"
-  local_api_base="$(comai_yaml_value local_api_base "$config_file" || true)"
-  local_model="$(comai_yaml_value local_model "$config_file" || true)"
-  gpt_model="$(comai_yaml_value gpt_model "$config_file" || true)"
-  ollama_api_base="$(comai_yaml_value ollama_api_base "$config_file" || true)"
-  ollama_model="$(comai_yaml_value ollama_model "$config_file" || true)"
-  openai_api_base="$(comai_yaml_value openai_api_base "$config_file" || true)"
-  openai_api_key="$(comai_yaml_value openai_api_key "$config_file" || true)"
+  local_api_base="$(comai_yaml_value local_api_base "$config_file" || comai_yaml_provider_value local api_base "$config_file" || true)"
+  local_model="$(comai_yaml_value local_model "$config_file" || comai_yaml_provider_value local model "$config_file" || true)"
+  gpt_model="$(comai_yaml_value gpt_model "$config_file" || comai_yaml_provider_value openai model "$config_file" || true)"
+  ollama_api_base="$(comai_yaml_value ollama_api_base "$config_file" || comai_yaml_provider_value ollama api_base "$config_file" || true)"
+  ollama_model="$(comai_yaml_value ollama_model "$config_file" || comai_yaml_provider_value ollama model "$config_file" || true)"
+  lmstudio_api_base="$(comai_yaml_value lmstudio_api_base "$config_file" || comai_yaml_provider_value lmstudio api_base "$config_file" || true)"
+  lmstudio_model="$(comai_yaml_value lmstudio_model "$config_file" || comai_yaml_provider_value lmstudio model "$config_file" || true)"
+  openai_api_base="$(comai_yaml_value openai_api_base "$config_file" || comai_yaml_provider_value openai api_base "$config_file" || true)"
+  openai_api_key="$(comai_yaml_value openai_api_key "$config_file" || comai_yaml_provider_value openai api_key "$config_file" || true)"
   max_tokens="$(comai_yaml_value max_tokens "$config_file" || true)"
   timeout="$(comai_yaml_value timeout "$config_file" || true)"
   log_file="$(comai_yaml_value log_file "$config_file" || true)"
@@ -107,6 +208,7 @@ comai_load_config() {
   api_base_url="$(comai_trim_trailing_slashes "${api_base_url:-http://127.0.0.1}")"
   local_api_base="$(comai_trim_trailing_slashes "${local_api_base:-${api_base_url}:${api_base_port:-11435}}")"
   ollama_api_base="$(comai_trim_trailing_slashes "${ollama_api_base:-http://127.0.0.1:11434}")"
+  lmstudio_api_base="$(comai_trim_trailing_slashes "${lmstudio_api_base:-http://127.0.0.1:1234}")"
 
   COMAI_PROVIDER="${COMAI_PROVIDER:-${provider:-local}}"
   COMAI_AI_DIR="${COMAI_AI_DIR:-$(comai_expand_home "${ai_dir:-~/ai}")}"
@@ -114,6 +216,7 @@ comai_load_config() {
   COMAI_LOCAL_API_BASE="${COMAI_LOCAL_API_BASE:-${local_api_base}}"
   COMAI_OPENAI_MODEL="${COMAI_OPENAI_MODEL:-${gpt_model:-gpt-5.5}}"
   COMAI_OLLAMA_MODEL="${COMAI_OLLAMA_MODEL:-${ollama_model:-qwen2.5-coder:7b}}"
+  COMAI_LMSTUDIO_MODEL="${COMAI_LMSTUDIO_MODEL:-${lmstudio_model:-local-model}}"
   if [[ -z "${COMAI_MODEL:-}" ]]; then
     case "$COMAI_PROVIDER" in
       openai)
@@ -122,6 +225,9 @@ comai_load_config() {
       ollama)
         COMAI_MODEL="$COMAI_OLLAMA_MODEL"
         ;;
+      lmstudio)
+        COMAI_MODEL="$COMAI_LMSTUDIO_MODEL"
+        ;;
       *)
         COMAI_MODEL="$COMAI_LOCAL_MODEL"
         ;;
@@ -129,6 +235,7 @@ comai_load_config() {
   fi
   COMAI_OPENAI_API_BASE="${COMAI_OPENAI_API_BASE:-${openai_api_base:-https://api.openai.com}}"
   COMAI_OLLAMA_API_BASE="${COMAI_OLLAMA_API_BASE:-${ollama_api_base}}"
+  COMAI_LMSTUDIO_API_BASE="${COMAI_LMSTUDIO_API_BASE:-${lmstudio_api_base}}"
   if [[ -z "${COMAI_API_BASE:-}" ]]; then
     case "$COMAI_PROVIDER" in
       openai)
@@ -136,6 +243,9 @@ comai_load_config() {
         ;;
       ollama)
         COMAI_API_BASE="$COMAI_OLLAMA_API_BASE"
+        ;;
+      lmstudio)
+        COMAI_API_BASE="$COMAI_LMSTUDIO_API_BASE"
         ;;
       *)
         COMAI_API_BASE="$COMAI_LOCAL_API_BASE"
@@ -182,6 +292,7 @@ Examples:
   comai how this command work -command "ls -lah"
   comai gpt hi
   comai ollama hi
+  comai lmstudio hi
   comai --model=MODEL ask anything
 
 Options:
@@ -189,6 +300,8 @@ Options:
   --gpt, --chatgpt             Use OpenAI ChatGPT for this request
   ollama                       Use Ollama for this request
   --ollama                     Use Ollama for this request
+  lmstudio                     Use LM Studio for this request
+  --lmstudio                   Use LM Studio for this request
   --model MODEL, --model=MODEL   Use a different model for this request
   --api-base URL, --api-base=URL Use a different provider API base
   --max-tokens N                Limit answer length
@@ -212,6 +325,8 @@ Environment:
   COMAI_OPENAI_API_KEY=${COMAI_OPENAI_API_KEY:+set}
   COMAI_OLLAMA_MODEL=$COMAI_OLLAMA_MODEL
   COMAI_OLLAMA_API_BASE=$COMAI_OLLAMA_API_BASE
+  COMAI_LMSTUDIO_MODEL=$COMAI_LMSTUDIO_MODEL
+  COMAI_LMSTUDIO_API_BASE=$COMAI_LMSTUDIO_API_BASE
   COMAI_MAX_TOKENS=$COMAI_MAX_TOKENS
   COMAI_LOG_FILE=$COMAI_LOG_FILE
   COMAI_FILE_MAX_BYTES=$COMAI_FILE_MAX_BYTES
@@ -246,6 +361,14 @@ comai_select_ollama_provider() {
     COMAI_MODEL="$COMAI_OLLAMA_MODEL"
   fi
   COMAI_API_BASE="$COMAI_OLLAMA_API_BASE"
+}
+
+comai_select_lmstudio_provider() {
+  COMAI_PROVIDER="lmstudio"
+  if [[ "${COMAI_MODEL_EXPLICIT:-0}" -ne 1 ]]; then
+    COMAI_MODEL="$COMAI_LMSTUDIO_MODEL"
+  fi
+  COMAI_API_BASE="$COMAI_LMSTUDIO_API_BASE"
 }
 
 comai_select_local_provider() {

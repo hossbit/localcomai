@@ -17,7 +17,7 @@ COMAI_ROOT_DIR="$(cd "$(dirname "$COMAI_BIN_PATH")/.." && pwd)"
 # shellcheck source=../lib/comai/ai.sh
 . "$COMAI_ROOT_DIR/lib/comai/ai.sh"
 
-COMAI_VERSION="2.2.3"
+COMAI_VERSION="2.3.0"
 COMAI_HISTORY_FILE="${COMAI_HISTORY_FILE:-$HOME/.local/share/comai/history.log}"
 COMAI_SOURCE_URL="${COMAI_SOURCE_URL:-https://github.com/hossbit/comai-linux-assistant.git}"
 
@@ -112,12 +112,12 @@ comai_cmd_setup() {
   local provider api model key answer
 
   printf 'ComAI setup\n'
-  printf 'Provider [local/ollama/openai] (%s): ' "$COMAI_PROVIDER"
+  printf 'Provider [local/ollama/lmstudio/openai] (%s): ' "$COMAI_PROVIDER"
   read -r provider
   provider="${provider:-$COMAI_PROVIDER}"
   case "$provider" in
-    local|ollama|openai) ;;
-    *) comai_error "provider must be local, ollama, or openai"; return 1 ;;
+    local|ollama|lmstudio|openai) ;;
+    *) comai_error "provider must be local, ollama, lmstudio, or openai"; return 1 ;;
   esac
 
   comai_set_config_value provider "$provider"
@@ -128,28 +128,36 @@ comai_cmd_setup() {
       read -r api
       printf 'Local model (%s): ' "$COMAI_LOCAL_MODEL"
       read -r model
-      comai_set_config_value local_api_base "${api:-$COMAI_LOCAL_API_BASE}"
-      comai_set_config_value local_model "${model:-$COMAI_LOCAL_MODEL}"
+      comai_set_provider_config_value local api_base "${api:-$COMAI_LOCAL_API_BASE}"
+      comai_set_provider_config_value local model "${model:-$COMAI_LOCAL_MODEL}"
       ;;
     ollama)
       printf 'Ollama API base (%s): ' "$COMAI_OLLAMA_API_BASE"
       read -r api
       printf 'Ollama model (%s): ' "$COMAI_OLLAMA_MODEL"
       read -r model
-      comai_set_config_value ollama_api_base "${api:-$COMAI_OLLAMA_API_BASE}"
-      comai_set_config_value ollama_model "${model:-$COMAI_OLLAMA_MODEL}"
+      comai_set_provider_config_value ollama api_base "${api:-$COMAI_OLLAMA_API_BASE}"
+      comai_set_provider_config_value ollama model "${model:-$COMAI_OLLAMA_MODEL}"
+      ;;
+    lmstudio)
+      printf 'LM Studio API base (%s): ' "$COMAI_LMSTUDIO_API_BASE"
+      read -r api
+      printf 'LM Studio model (%s): ' "$COMAI_LMSTUDIO_MODEL"
+      read -r model
+      comai_set_provider_config_value lmstudio api_base "${api:-$COMAI_LMSTUDIO_API_BASE}"
+      comai_set_provider_config_value lmstudio model "${model:-$COMAI_LMSTUDIO_MODEL}"
       ;;
     openai)
       printf 'OpenAI API base (%s): ' "$COMAI_OPENAI_API_BASE"
       read -r api
       printf 'OpenAI model (%s): ' "$COMAI_OPENAI_MODEL"
       read -r model
-      comai_set_config_value openai_api_base "${api:-$COMAI_OPENAI_API_BASE}"
-      comai_set_config_value gpt_model "${model:-$COMAI_OPENAI_MODEL}"
+      comai_set_provider_config_value openai api_base "${api:-$COMAI_OPENAI_API_BASE}"
+      comai_set_provider_config_value openai model "${model:-$COMAI_OPENAI_MODEL}"
       if [[ -z "${COMAI_OPENAI_API_KEY:-}" ]]; then
         printf 'OpenAI API key (leave blank to use OPENAI_API_KEY later): '
         read -r key
-        [[ -z "$key" ]] || comai_set_config_value openai_api_key "$key"
+        [[ -z "$key" ]] || comai_set_provider_config_value openai api_key "$key"
       fi
       ;;
   esac
@@ -162,6 +170,7 @@ comai_provider_model() {
   case "$1" in
     local) printf '%s\n' "$COMAI_LOCAL_MODEL" ;;
     ollama) printf '%s\n' "$COMAI_OLLAMA_MODEL" ;;
+    lmstudio) printf '%s\n' "$COMAI_LMSTUDIO_MODEL" ;;
     openai) printf '%s\n' "$COMAI_OPENAI_MODEL" ;;
   esac
 }
@@ -170,6 +179,7 @@ comai_provider_api_base() {
   case "$1" in
     local) printf '%s\n' "$COMAI_LOCAL_API_BASE" ;;
     ollama) printf '%s\n' "$COMAI_OLLAMA_API_BASE" ;;
+    lmstudio) printf '%s\n' "$COMAI_LMSTUDIO_API_BASE" ;;
     openai) printf '%s\n' "$COMAI_OPENAI_API_BASE" ;;
   esac
 }
@@ -185,6 +195,9 @@ comai_provider_status() {
       ;;
     ollama)
       curl --max-time 2 -fsS "${api_base}/api/tags" >/dev/null 2>&1
+      ;;
+    lmstudio)
+      curl --max-time 2 -fsS "${api_base}/v1/models" >/dev/null 2>&1
       ;;
     openai)
       [[ -n "${COMAI_OPENAI_API_KEY:-}" ]] || return 2
@@ -207,6 +220,9 @@ comai_provider_models() {
       ;;
     ollama)
       curl --max-time "$COMAI_TIMEOUT" -fsS "${api_base}/api/tags" | jq -r '.models[]?.name'
+      ;;
+    lmstudio)
+      curl --max-time "$COMAI_TIMEOUT" -fsS "${api_base}/v1/models" | jq -r '.data[]?.id'
       ;;
     openai)
       [[ -n "${COMAI_OPENAI_API_KEY:-}" ]] || {
@@ -257,7 +273,7 @@ comai_cmd_status() {
   printf 'Config: %s\n' "$COMAI_CONFIG_FILE"
   if [[ "${1:-all}" == "all" ]]; then
     comai_log info provider_status_check "provider=all"
-    for provider in local ollama openai; do
+    for provider in local ollama lmstudio openai; do
       printf '\n'
       if ! comai_cmd_status_one "$provider"; then
         failed=1
@@ -266,13 +282,13 @@ comai_cmd_status() {
     done
   else
     case "$1" in
-      local|ollama|openai)
+      local|ollama|lmstudio|openai)
         if ! comai_cmd_status_one "$1"; then
           failed=1
           [[ "$1" == "$COMAI_PROVIDER" ]] && active_failed=1
         fi
         ;;
-      *) comai_error "usage: comai status [all|local|ollama|openai]"; return 1 ;;
+      *) comai_error "usage: comai status [all|local|ollama|lmstudio|openai]"; return 1 ;;
     esac
   fi
 
@@ -291,7 +307,7 @@ comai_cmd_models() {
   fi
 
   if [[ "${1:-all}" == "all" ]]; then
-    for provider in local ollama openai; do
+    for provider in local ollama lmstudio openai; do
       printf '%s%s:\n' "$provider" "$([[ "$provider" == "$COMAI_PROVIDER" ]] && printf ' (active)')"
       if ! comai_provider_models "$provider" | sed 's/^/  /'; then
         printf '  unavailable\n'
@@ -302,11 +318,11 @@ comai_cmd_models() {
   fi
 
   case "$1" in
-    local|ollama|openai)
+    local|ollama|lmstudio|openai)
       comai_log info models "provider=$1"
       comai_provider_models "$1"
       ;;
-    *) comai_error "usage: comai models [all|local|ollama|openai]"; return 1 ;;
+    *) comai_error "usage: comai models [all|local|ollama|lmstudio|openai]"; return 1 ;;
   esac
 }
 
@@ -315,7 +331,7 @@ comai_cmd_provider() {
     ""|show|all)
       local provider status suffix
       printf 'active: %s\n' "$COMAI_PROVIDER"
-      for provider in local ollama openai; do
+      for provider in local ollama lmstudio openai; do
         suffix=""
         [[ "$provider" == "$COMAI_PROVIDER" ]] && suffix=" (active)"
         if comai_provider_status "$provider"; then
@@ -334,16 +350,16 @@ comai_cmd_provider() {
       done
       ;;
     list)
-      printf 'local\nollama\nopenai\n'
+      printf 'local\nollama\nlmstudio\nopenai\n'
       ;;
     set)
       case "${2:-}" in
-        local|ollama|openai)
+        local|ollama|lmstudio|openai)
           comai_set_config_value provider "$2"
           printf 'Set provider to %s in %s\n' "$2" "$COMAI_CONFIG_FILE"
           ;;
         *)
-          comai_error "usage: comai provider set local|ollama|openai"
+          comai_error "usage: comai provider set local|ollama|lmstudio|openai"
           return 1
           ;;
       esac
@@ -366,6 +382,16 @@ comai_cmd_config() {
             print "openai_api_key:"
           } else {
             print "openai_api_key: [set]"
+          }
+          next
+        }
+        /^[[:space:]]*api_key[[:space:]]*:/ {
+          value = substr($0, index($0, ":") + 1)
+          gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+          if (value == "") {
+            print "    api_key:"
+          } else {
+            print "    api_key: [set]"
           }
           next
         }

@@ -10,6 +10,7 @@
 ![Bash](https://img.shields.io/badge/Bash-shell-4EAA25)
 ![Local AI](https://img.shields.io/badge/Local%20AI-supported-2E7D32)
 ![Ollama](https://img.shields.io/badge/Ollama-supported-black)
+![LM Studio](https://img.shields.io/badge/LM%20Studio-supported-1F6FEB)
 ![OpenAI](https://img.shields.io/badge/OpenAI-supported-10A37F)
 ![License](https://img.shields.io/badge/license-MIT-green)
 [![Wiki](https://img.shields.io/badge/Wiki-documentation-blueviolet)](https://github.com/hossbit/comai-linux-assistant-wiki)
@@ -52,11 +53,12 @@ comai explain chmod 755
 comai how do I find files larger than 1GB?
 comai do you see any error? -f application.log
 comai ollama hi
+comai lmstudio hi
 comai gpt hi
 ```
 
-Local mode is the default. Use `comai ollama ...` for Ollama and
-`comai gpt ...` for OpenAI.
+Local mode is the default. Use `comai ollama ...` for Ollama,
+`comai lmstudio ...` for LM Studio, and `comai gpt ...` for OpenAI.
 
 ## Main Commands
 
@@ -82,7 +84,8 @@ ComAI supports:
 
 - `local`: any OpenAI-compatible local server, default `http://127.0.0.1:11435`
 - `ollama`: local Ollama API, default `http://127.0.0.1:11434`
-- `openai`: OpenAI API with `OPENAI_API_KEY` or `openai_api_key`
+- `lmstudio`: LM Studio local server, default `http://127.0.0.1:1234`
+- `openai`: OpenAI API with `OPENAI_API_KEY` or `providers.openai.api_key`
 
 Check providers:
 
