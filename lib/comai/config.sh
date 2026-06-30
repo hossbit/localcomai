@@ -19,7 +19,13 @@ comai_yaml_value() {
       sub(/^[[:space:]]+/, "", value)
       sub(/[[:space:]]+$/, "", value)
       print value
-      exit
+      found = 1
+      exit 0
+    }
+    END {
+      if (!found) {
+        exit 1
+      }
     }
   ' "$file"
 }
@@ -35,11 +41,11 @@ comai_yaml_provider_value() {
       in_providers = ($0 ~ /^providers[[:space:]]*:/)
       in_provider = 0
     }
-    in_providers && $0 ~ "^[[:space:]]{2}" provider "[[:space:]]*:" {
+    in_providers && $0 ~ "^[[:space:]][[:space:]]" provider "[[:space:]]*:" {
       in_provider = 1
       next
     }
-    in_provider && $0 ~ "^[[:space:]]{2}[A-Za-z0-9_-]+[[:space:]]*:" {
+    in_provider && $0 ~ "^[[:space:]][[:space:]][A-Za-z0-9_-]+[[:space:]]*:" {
       in_provider = 0
     }
     in_provider {
@@ -50,7 +56,13 @@ comai_yaml_provider_value() {
         sub(/^[[:space:]]+/, "", value)
         sub(/[[:space:]]+$/, "", value)
         print value
-        exit
+        found = 1
+        exit 0
+      }
+    }
+    END {
+      if (!found) {
+        exit 1
       }
     }
   ' "$file"
@@ -142,17 +154,17 @@ comai_set_provider_config_value() {
         in_providers = ($0 ~ /^providers[[:space:]]*:/)
         in_provider = 0
       }
-      in_providers && $0 ~ "^[[:space:]]{2}" provider "[[:space:]]*:" {
+      in_providers && $0 ~ "^[[:space:]][[:space:]]" provider "[[:space:]]*:" {
         in_provider = 1
         print
         next
       }
-      in_provider && $0 ~ "^[[:space:]]{4}" key "[[:space:]]*:" {
+      in_provider && $0 ~ "^[[:space:]][[:space:]][[:space:]][[:space:]]" key "[[:space:]]*:" {
         print "    " key ": " value
         changed = 1
         next
       }
-      in_provider && $0 ~ "^[[:space:]]{2}[A-Za-z0-9_-]+[[:space:]]*:" {
+      in_provider && $0 ~ "^[[:space:]][[:space:]][A-Za-z0-9_-]+[[:space:]]*:" {
         if (!changed) {
           print "    " key ": " value
           changed = 1
