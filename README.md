@@ -17,6 +17,12 @@
 
 </div>
 
+<div align="center">
+  <a href="https://buymeacoffee.com/mirhh">
+    <img src="https://raw.githubusercontent.com/hossbit/mirassets/main/images/bmc-button.png" alt="Buy me a coffee" width="300">
+  </a>
+</div>
+
 **ComAI** is a Bash-powered AI assistant for your Linux terminal.
 
 Use it to ask Linux questions, explain commands before you run them, inspect
@@ -161,11 +167,6 @@ file numfmt git
 
 ## Support
 
-<div align="center">
-  <a href="https://buymeacoffee.com/mirhh">
-    <img src="https://raw.githubusercontent.com/hossbit/mirassets/main/images/bmc-button.png" alt="Buy me a coffee" width="300">
-  </a>
-</div>
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/hossbit/mirassets/main/images/give-it-a-star.png" alt="If this repo helped you, give it a star" width="100%">
